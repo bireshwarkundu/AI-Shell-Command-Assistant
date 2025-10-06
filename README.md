@@ -1,6 +1,5 @@
 # AI-Shell-Command-Assistant
 
-# AI Shell Command Assistant
 
 A single-page tool that turns natural language into suggested shell commands with explanations and a simple run simulator.
 
