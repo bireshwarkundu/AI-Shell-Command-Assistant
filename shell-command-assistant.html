@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Shell Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Green palette derived from provided image */
+            --bg: #f1fcf3;            /* background 50 */
+            --primary: #2cc95b;      /* 500 */
+            --primary-dark: #1c9d43; /* 600 */
+            --secondary: #1a7b37;    /* 700 */
+            --dark: #17502a;         /* 900 */
+            --darker: #072c13;       /* 950 */
+            --light: #072c13;        /* global text color */
+            --surface: #ffffff;      /* cards */
+            --border: #bef4cd;       /* 200 */
+            --gray: #1a6130;         /* 800 tint for muted text */
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Noto Sans', sans-serif;
+            background: var(--bg);
+            color: var(--light);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: var(--gray);
+            font-size: 1.2rem;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .input-section, .output-section {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 24px rgba(7, 44, 19, 0.06);
+            animation: slideInLeft 0.8s ease;
+        }
+
+        .output-section {
+            animation: slideInRight 0.8s ease;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            font-size: 1.2rem;
+        }
+
+        .input-area {
+            width: 100%;
+            min-height: 150px;
+            background: #ffffff;
+            border: 2px solid var(--border);
+            border-radius: 15px;
+            padding: 20px;
+            color: var(--light);
+            font-size: 1rem;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        .input-area:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #ffffff;
+            border: 1px solid var(--primary-dark);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-secondary {
+            background: #ffffff;
+            color: var(--light);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: #f6fdf8;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: #ffffff;
+        }
+
+        .command-display {
+            background: #f6fdf8;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary);
+            animation: pulse 2s infinite;
+        }
+
+        .command-text {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            color: var(--secondary);
+            word-break: break-all;
+        }
+
+        .output-display {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: var(--secondary);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e6f8ed;
+            border-left: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        .history-section {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 24px rgba(7, 44, 19, 0.06);
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .history-item {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .history-item:hover {
+            transform: translateX(5px);
+            background: #f6fdf8;
+        }
+
+        .history-query {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .history-command {
+            font-family: 'Courier New', monospace;
+            color: var(--secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .typewriter {
+            overflow: hidden;
+            border-right: 2px solid var(--primary);
+            white-space: nowrap;
+            animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
+        }
+
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: var(--primary) }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 12px;
+            color: #ffffff;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: var(--secondary);
+        }
+
+        .notification.error {
+            background: var(--danger);
+        }
+
+        .notification.warning {
+            background: var(--warning);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AI Shell Command Assistant</h1>
+            <p>Transform your natural language into powerful shell commands</p>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <h2 class="section-title">
+                    Describe Your Task
+                </h2>
+                <textarea 
+                    id="userInput" 
+                    class="input-area" 
+                    placeholder="Describe what you want to do in natural language. For example: 'Find all .log files modified in the last 2 days containing error text'"
+                ></textarea>
+                
+                <div class="button-group">
+                    <button id="generateBtn" class="btn btn-primary">
+                        Generate Command
+                    </button>
+                    <button id="clearBtn" class="btn btn-secondary">
+                        Clear
+                    </button>
+                    <button id="examplesBtn" class="btn btn-secondary">
+                        Show Examples
+                    </button>
+                </div>
+
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>AI is crafting your perfect command...</p>
+                </div>
+            </div>
+
+            <div class="output-section">
+                <h2 class="section-title">
+                    Generated Command
+                </h2>
+                <div id="commandDisplay" class="command-display">
+                    <div id="commandText" class="command-text">
+                        Your generated command will appear here...
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="copyBtn" class="btn btn-secondary">
+                        Copy Command
+                    </button>
+                    <button id="runBtn" class="btn btn-primary">
+                        Run Command
+                    </button>
+                    <button id="explainBtn" class="btn btn-secondary">
+                        Explain Command
+                    </button>
+                </div>
+
+                <h2 class="section-title" style="margin-top: 30px;">
+                    Command Output
+                </h2>
+                <div id="outputDisplay" class="output-display">
+                    Command output will appear here...
+                </div>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <h2 class="section-title">
+                Command History
+            </h2>
+            <div id="historyList">
+                <!-- History items will be added here dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // DOM Elements
+        const userInput = document.getElementById('userInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const examplesBtn = document.getElementById('examplesBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const runBtn = document.getElementById('runBtn');
+        const explainBtn = document.getElementById('explainBtn');
+        const commandText = document.getElementById('commandText');
+        const outputDisplay = document.getElementById('outputDisplay');
+        const loading = document.getElementById('loading');
+        const historyList = document.getElementById('historyList');
+        const notification = document.getElementById('notification');
+
+        // Command database (in a real app, this would be an AI API call)
+        const commandExamples = {
+            "Find all .log files modified in the last 2 days containing 'error'": 
+                "find . -type f -name \"*.log\" -mtime -2 -exec grep -H \"error\" {} \\;",
+            
+            "Count the number of lines in all Python files in current directory": 
+                "find . -name \"*.py\" -type f | xargs wc -l",
+            
+            "Show disk usage for current directory sorted by size": 
+                "du -sh * | sort -hr",
+            
+            "Find all processes using port 3000": 
+                "lsof -i :3000",
+            
+            "Create a backup of my documents folder with timestamp": 
+                "tar -czf backup_$(date +%Y%m%d_%H%M%S).tar.gz ~/Documents/",
+            
+            "Monitor real-time system resource usage": 
+                "top -o %CPU",
+            
+            "Find and delete all empty directories": 
+                "find . -type d -empty -delete",
+            
+            "Convert all .jpg files to .png in current directory": 
+                "for file in *.jpg; do convert \"$file\" \"${file%.jpg}.png\"; done"
+        };
+
+        // Animation for typing effect
+        function typeWriter(element, text, speed = 50) {
+            element.innerHTML = '';
+            let i = 0;
+            
+            function type() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                    setTimeout(type, speed);
+                }
+            }
+            type();
+        }
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Simulate AI command generation
+        function generateCommand(userQuery) {
+            loading.style.display = 'block';
+            
+            // Simulate API call delay
+            setTimeout(() => {
+                let generatedCommand = commandExamples[userQuery];
+                
+                if (!generatedCommand) {
+                    // If no exact match, find the closest example
+                    for (const [key, value] of Object.entries(commandExamples)) {
+                        if (userQuery.toLowerCase().includes(key.split(' ')[0].toLowerCase())) {
+                            generatedCommand = value;
+                            break;
+                        }
+                    }
+                }
+                
+                // Fallback if no match found
+                if (!generatedCommand) {
+                    generatedCommand = `# AI-generated command for: ${userQuery}\necho "This is a simulated command. In a real implementation, this would be generated by an AI model."`;
+                }
+                
+                // Add typing animation
+                typeWriter(commandText, generatedCommand);
+                
+                // Add to history
+                addToHistory(userQuery, generatedCommand);
+                
+                loading.style.display = 'none';
+                showNotification('Command generated successfully!', 'success');
+            }, 1500);
+        }
+
+        // Add command to history
+        function addToHistory(query, command) {
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item fade-in';
+            historyItem.innerHTML = `
+                <div class="history-query">${query}</div>
+                <div class="history-command">${command}</div>
+            `;
+            
+            historyItem.addEventListener('click', () => {
+                userInput.value = query;
+                typeWriter(commandText, command);
+            });
+            
+            historyList.insertBefore(historyItem, historyList.firstChild);
+        }
+
+        // Run command (simulated)
+        function runCommand() {
+            const command = commandText.textContent;
+            if (!command || command.includes('Your generated command')) {
+                showNotification('Please generate a command first!', 'warning');
+                return;
+            }
+            
+            outputDisplay.textContent = 'Executing command...';
+            outputDisplay.style.color = 'var(--warning)';
+            
+            // Simulate command execution
+            setTimeout(() => {
+                const outputs = [
+                    `$ ${command}\nfile1.log: ERROR: Database connection failed\nfile2.log: ERROR: Permission denied\nFound 2 files with errors`,
+                    `$ ${command}\n  125 main.py\n   89 utils.py\n   45 config.py\n  259 total`,
+                    `$ ${command}\n4.5G  videos/\n2.1G  documents/\n1.2G  downloads/\n890M  images/`,
+                    `$ ${command}\nCOMMAND   PID    USER   FD   TYPE DEVICE SIZE/OFF NODE NAME\nnode    12345  user   21u  IPv4 0x12345  0t0  TCP *:3000 (LISTEN)`
+                ];
+                
+                const randomOutput = outputs[Math.floor(Math.random() * outputs.length)];
+                outputDisplay.textContent = randomOutput;
+                outputDisplay.style.color = 'var(--light)';
+                
+                showNotification('Command executed successfully!', 'success');
+            }, 2000);
+        }
+
+        // Event Listeners
+        generateBtn.addEventListener('click', () => {
+            const query = userInput.value.trim();
+            if (!query) {
+                showNotification('Please enter a description of what you want to do!', 'warning');
+                return;
+            }
+            generateCommand(query);
+        });
+
+        clearBtn.addEventListener('click', () => {
+            userInput.value = '';
+            commandText.textContent = 'Your generated command will appear here...';
+            outputDisplay.textContent = 'Command output will appear here...';
+            showNotification('Cleared all fields!', 'success');
+        });
+
+        examplesBtn.addEventListener('click', () => {
+            userInput.value = "Find all .log files modified in the last 2 days containing 'error'";
+            generateCommand(userInput.value);
+        });
+
+        copyBtn.addEventListener('click', () => {
+            const command = commandText.textContent;
+            navigator.clipboard.writeText(command).then(() => {
+                showNotification('Command copied to clipboard!', 'success');
+            });
+        });
+
+        runBtn.addEventListener('click', runCommand);
+
+        explainBtn.addEventListener('click', () => {
+            const command = commandText.textContent;
+            if (!command || command.includes('Your generated command')) {
+                showNotification('Please generate a command first!', 'warning');
+                return;
+            }
+            
+            outputDisplay.textContent = `Command Explanation:\n\n${command}\n\nThis command does the following:\n• Searches for files matching specific criteria\n• Filters results based on time and content\n• Executes additional processing as needed\n• Outputs the results in a readable format`;
+            outputDisplay.style.color = 'var(--secondary)';
+            
+            showNotification('Command explanation displayed!', 'success');
+        });
+
+        // Initialize with some history
+        setTimeout(() => {
+            addToHistory(
+                "Find all .log files modified in the last 2 days containing 'error'",
+                "find . -type f -name \"*.log\" -mtime -2 -exec grep -H \"error\" {} \\;"
+            );
+        }, 1000);
+    </script>
+</body>
+</html>
